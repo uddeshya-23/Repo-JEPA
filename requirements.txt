@@ -1,0 +1,22 @@
+# Core dependencies
+torch>=2.0.0
+transformers>=4.35.0
+datasets>=2.14.0
+accelerate>=0.24.0
+einops>=0.7.0
+sentencepiece>=0.1.99
+
+# Training & monitoring
+wandb>=0.16.0
+tqdm>=4.66.0
+
+# Evaluation
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
+# Development
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Optional: Flash Attention (for RTX GPUs)
+# flash-attn>=2.3.0
