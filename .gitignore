@@ -40,3 +40,7 @@ wandb/
 .vscode/
 .idea/
 .DS_Store
+
+# RunPod scripts (contain credentials)
+*runpod*.py
+*pod*.py
