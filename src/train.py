@@ -34,7 +34,9 @@ def train(
     output_dir: str = "checkpoints",
     use_wandb: bool = True,
     sanity_check: bool = False,
+    force_real_data: bool = False,
 ):
+
     """
     Main training function.
     
@@ -63,7 +65,9 @@ def train(
         split="train",
         language="python",
         max_samples=max_samples,
+        allow_mock=not force_real_data,
     )
+
     
     # Data loader
     collator = CodeDocCollator(tokenizer)
@@ -263,6 +267,8 @@ def main():
     parser.add_argument("--output-dir", type=str, default="checkpoints", help="Output directory")
     parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
     parser.add_argument("--no-pretrained", action="store_true", help="Don't use pretrained encoder")
+    parser.add_argument("--force-real-data", action="store_true", help="Abort if real data cannot be loaded")
+
     
     args = parser.parse_args()
     
@@ -281,7 +287,9 @@ def main():
         output_dir=args.output_dir,
         use_wandb=not args.no_wandb,
         sanity_check=args.sanity_check,
+        force_real_data=args.force_real_data,
     )
+
 
 
 if __name__ == "__main__":

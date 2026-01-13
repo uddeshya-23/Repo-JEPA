@@ -140,7 +140,10 @@ def evaluate_code_search(
         "n_samples": n_samples,
         "avg_rank": np.mean(rankings),
         "median_rank": np.median(rankings),
+        "similarity": similarity.tolist(), # Convert to list for JSON serialization
+        "rankings": rankings,
     }
+
     
     return results
 
@@ -151,6 +154,8 @@ def main():
     parser.add_argument("--dataset", type=str, default="codesearchnet", help="Dataset to evaluate on")
     parser.add_argument("--max-samples", type=int, default=1000, help="Max eval samples")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
+    parser.add_argument("--save-results", type=str, help="Path to save evaluation results (JSON)")
+
     
     args = parser.parse_args()
     
@@ -198,6 +203,14 @@ def main():
         print("✅ SUCCESS: MRR >= 0.6 (target achieved)")
     else:
         print(f"⚠️  MRR below target (0.6). Current: {results['mrr']:.4f}")
+        
+    # Save results
+    if args.save_results:
+        import json
+        with open(args.save_results, "w") as f:
+            json.dump(results, f)
+        print(f"💾 Results saved to {args.save_results}")
+
 
 
 if __name__ == "__main__":

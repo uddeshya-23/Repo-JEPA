@@ -38,11 +38,13 @@ class CodeSearchNetDataset(Dataset):
         max_samples: Optional[int] = None,
         min_doc_length: int = 10,
         min_code_length: int = 20,
+        allow_mock: bool = True,
     ):
         self.split = split
         self.language = language
         self.min_doc_length = min_doc_length
         self.min_code_length = min_code_length
+        self.allow_mock = allow_mock
         
         # Load dataset
         self.data = self._load_and_filter(max_samples)
@@ -51,20 +53,45 @@ class CodeSearchNetDataset(Dataset):
         """Load and filter CodeSearchNet data."""
         print(f"Loading CodeSearchNet ({self.language}/{self.split})...")
         
-        try:
-            # Try the new API without trust_remote_code
-            dataset = load_dataset(
-                "code_search_net",
-                self.language,
-                split=self.split,
-            )
-        except Exception as e:
-            print(f"Error loading dataset: {e}")
+        # Try multiple identifiers to be robust
+        identifiers = [
+            ("claudios/code_search_net", self.language), # Modern parquet version
+            ("code_search_net", self.language),         # Traditional version
+        ]
+        
+        dataset = None
+        last_error = None
+        
+        for identifier, subset in identifiers:
+            try:
+                print(f"Attempting to load: {identifier} ({subset})...")
+                # Try loading with streaming to be faster and bypass some disk issues
+                dataset = load_dataset(
+                    identifier,
+                    subset,
+                    split=self.split,
+                    streaming=True # Use streaming to check if it works without full download
+                )
+                # Verify we can actually get at least one item
+                next(iter(dataset))
+                print(f"Successfully connected to: {identifier}")
+                break
+            except Exception as e:
+                print(f"Failed to load {identifier}: {e}")
+                last_error = e
+                dataset = None
+        
+        if dataset is None:
+            if not self.allow_mock:
+                print("ABORTING: Real data loading failed and allow_mock=False")
+                raise RuntimeError(f"Could not load real CodeSearchNet dataset. Last error: {last_error}")
+                
             print("Falling back to mock data for testing...")
-            # Use larger mock dataset for meaningful training
             return self._create_mock_data(max_samples or 10000)
         
         pairs = []
+        count = 0
+        # Iterate over streaming dataset
         for item in dataset:
             docstring = item.get("func_documentation_string", "")
             code = item.get("func_code_string", "")
@@ -83,7 +110,8 @@ class CodeSearchNetDataset(Dataset):
                 language=self.language,
             ))
             
-            if max_samples and len(pairs) >= max_samples:
+            count += 1
+            if max_samples and count >= max_samples:
                 break
         
         print(f"Loaded {len(pairs)} code-doc pairs")

@@ -6,6 +6,9 @@ accelerate>=0.24.0
 einops>=0.7.0
 sentencepiece>=0.1.99
 
+matplotlib
+seaborn
+
 # Training & monitoring
 wandb>=0.16.0
 tqdm>=4.66.0
