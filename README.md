@@ -1,64 +1,27 @@
-# Repo-JEPA: Semantic Code Navigator
-
-A **Joint Embedding Predictive Architecture** for semantic code search on consumer hardware.
-
-## 🎯 What It Does
-
-Query with natural language ("handle login failure") → Get the exact function, even if keywords are missing.
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐     ┌─────────────────┐
-│  Code Encoder   │     │ Docstring Enc.  │
-│  (Trainable)    │     │  (EMA Target)   │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         ▼                       ▼
-     Code Embed.            Doc Embed.
-         │                       │
-         └───────────┬───────────┘
-                     ▼
-              VICReg Loss
-```
-
-## 🚀 Quick Start
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run sanity check
-python -m src.train --sanity-check
-
-# Full training
-python -m src.train --dataset codesearchnet --epochs 10
-
-# Evaluate
-python -m src.eval.code_search --checkpoint checkpoints/best.pt
-```
-
 ## 🧩 Usage for Others (Inference)
 
-If you just want to use the model for semantic search in your own project:
+### 1. Zero-Touch Indexing (Automated)
+Don't worry about manual encoding. Use the **Automated Indexer** to scan your entire project in one command:
+
+```bash
+# Encodes all python functions in 'my_project' directory
+python src/utils/indexer.py --path ./my_project --save my_project.index
+```
+
+### 2. Search in Milliseconds
+Once the index is built, searching is nearly instant and happens locally:
 
 ```python
 from src.utils.search import RepoJEPASearch
 
-# 1. Initialize (will download from Hugging Face)
-searcher = RepoJEPASearch("uddeshya-23/repo-jepa")
+searcher = RepoJEPASearch("uddeshya-k/RepoJepa")
+searcher.load_index("my_project.index")
 
-# 2. Index your code repository
-searcher.add_code([
-    "def calculate_tax(amount): return amount * 0.2",
-    "def auth_user(token): return db.find(token)",
-    "def save_log(msg): print(f'[LOG] {msg}')"
-])
-
-# 3. Query with natural language
-results = searcher.query("how to pay taxes?", top_k=1)
-print(results[0][0])  # Prints the first code snippet
+# Search by intent
+results = searcher.query("how to handle payment webhooks?")
+print(f"File: {results[0]['file']}, Line: {results[0]['line']}")
 ```
+
 
 ## 📊 Performance (H100 Result)
 
