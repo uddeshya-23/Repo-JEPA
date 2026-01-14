@@ -35,7 +35,9 @@ def train(
     use_wandb: bool = True,
     sanity_check: bool = False,
     force_real_data: bool = False,
+    resume_from: Optional[str] = None,
 ):
+
 
     """
     Main training function.
@@ -132,10 +134,24 @@ def train(
     print(f"\nStarting training for {config.max_epochs} epochs...")
     print(f"Effective batch size: {config.effective_batch_size}")
     
-    global_step = 0
-    best_loss = float("inf")
+    print(f"Effective batch size: {config.effective_batch_size}")
     
-    for epoch in range(config.max_epochs):
+    global_step = 0
+    start_epoch = 0
+    best_loss = float("inf")
+
+    # Resume from checkpoint
+    if resume_from:
+        print(f"Loading checkpoint from {resume_from}...")
+        checkpoint = torch.load(resume_from, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        start_epoch = checkpoint.get("epoch", 0) + 1
+        best_loss = checkpoint.get("loss", float("inf"))
+        print(f"Resuming from epoch {start_epoch}")
+    
+    for epoch in range(start_epoch, config.max_epochs):
+
         model.train()
         epoch_loss = 0.0
         epoch_metrics: Dict[str, float] = {}
@@ -268,6 +284,8 @@ def main():
     parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
     parser.add_argument("--no-pretrained", action="store_true", help="Don't use pretrained encoder")
     parser.add_argument("--force-real-data", action="store_true", help="Abort if real data cannot be loaded")
+    parser.add_argument("--resume-from", type=str, help="Path to checkpoint to resume from")
+
 
     
     args = parser.parse_args()
@@ -288,7 +306,9 @@ def main():
         use_wandb=not args.no_wandb,
         sanity_check=args.sanity_check,
         force_real_data=args.force_real_data,
+        resume_from=args.resume_from,
     )
+
 
 
 
