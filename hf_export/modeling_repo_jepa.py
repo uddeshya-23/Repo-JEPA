@@ -68,7 +68,7 @@ class RepoJEPAModel(PreTrainedModel):
     """
     Repo-JEPA: Joint Embedding Predictive Architecture for Code Search.
     
-    Use for semantic code search and retrieval tasks.
+    Use for semantic code search (encode_code) and retrieval queries (encode_query).
     """
     
     config_class = RepoJEPAConfig
@@ -76,65 +76,63 @@ class RepoJEPAModel(PreTrainedModel):
     def __init__(self, config: RepoJEPAConfig):
         super().__init__(config)
         
-        # Load base encoder
-        self.encoder = RobertaModel.from_pretrained(
+        # In the HF model, we store both encoders
+        self.context_encoder = RobertaModel.from_pretrained(
+            config.base_model,
+            add_pooling_layer=False,
+        )
+        self.target_encoder = RobertaModel.from_pretrained(
             config.base_model,
             add_pooling_layer=False,
         )
         
-        # Projection head
-        hidden_size = self.encoder.config.hidden_size
-        self.projector = ProjectionHead(hidden_size, config.hidden_dim)
+        # Projection heads
+        hidden_size = self.context_encoder.config.hidden_size
+        self.context_projector = ProjectionHead(hidden_size, config.hidden_dim)
+        self.target_projector = ProjectionHead(hidden_size, config.hidden_dim)
         
         self.post_init()
     
-    def forward(
+    def encode_code(
         self,
         input_ids: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
-        return_dict: bool = True,
     ) -> torch.Tensor:
-        """
-        Encode input and return embeddings.
-        
-        Args:
-            input_ids: Tokenized input [B, seq_len]
-            attention_mask: Attention mask [B, seq_len]
-        
-        Returns:
-            Embeddings [B, hidden_dim]
-        """
-        outputs = self.encoder(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-        )
-        
-        # Mean pooling
-        hidden_states = outputs.last_hidden_state
+        """Encode code snippet into embedding space."""
+        outputs = self.context_encoder(input_ids=input_ids, attention_mask=attention_mask)
+        pooled = self._mean_pool(outputs.last_hidden_state, attention_mask)
+        return self.context_projector(pooled)
+    
+    def encode_query(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """Encode search query (docstring) into embedding space."""
+        outputs = self.target_encoder(input_ids=input_ids, attention_mask=attention_mask)
+        pooled = self._mean_pool(outputs.last_hidden_state, attention_mask)
+        return self.target_projector(pooled)
+
+    def _mean_pool(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if attention_mask is not None:
             mask = attention_mask.unsqueeze(-1).expand(hidden_states.size()).float()
             sum_hidden = torch.sum(hidden_states * mask, dim=1)
             sum_mask = torch.clamp(mask.sum(dim=1), min=1e-9)
-            pooled = sum_hidden / sum_mask
-        else:
-            pooled = hidden_states.mean(dim=1)
-        
-        # Project
-        embeddings = self.projector(pooled)
-        
-        return embeddings
-    
-    def encode(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        """Alias for forward - encode text to embedding."""
-        return self.forward(input_ids, attention_mask)
+            return sum_hidden / sum_mask
+        return hidden_states.mean(dim=1)
+
+    def forward(self, **kwargs):
+        # HF requires forward(), we default to code encoding or raise error
+        if "input_ids" in kwargs:
+            return self.encode_code(kwargs["input_ids"], kwargs.get("attention_mask"))
+        raise NotImplementedError("Use .encode_code() or .encode_query() specifically.")
 
 
 # Register with Auto classes
-from transformers import AutoConfig, AutoModel
+try:
+    from transformers import AutoConfig, AutoModel
+    AutoConfig.register("repo-jepa", RepoJEPAConfig)
+    AutoModel.register(RepoJEPAConfig, RepoJEPAModel)
+except:
+    pass
 
-AutoConfig.register("repo-jepa", RepoJEPAConfig)
-AutoModel.register(RepoJEPAConfig, RepoJEPAModel)

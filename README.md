@@ -38,12 +38,35 @@ python -m src.train --dataset codesearchnet --epochs 10
 python -m src.eval.code_search --checkpoint checkpoints/best.pt
 ```
 
-## 📊 Benchmarks
+## 🧩 Usage for Others (Inference)
 
-| Metric | Target | Description |
-|--------|--------|-------------|
-| MRR | > 0.6 | Mean Reciprocal Rank on CodeSearchNet |
-| Linear Probe | > 85% | Code intent classification accuracy |
+If you just want to use the model for semantic search in your own project:
+
+```python
+from src.utils.search import RepoJEPASearch
+
+# 1. Initialize (will download from Hugging Face)
+searcher = RepoJEPASearch("uddeshya-23/repo-jepa")
+
+# 2. Index your code repository
+searcher.add_code([
+    "def calculate_tax(amount): return amount * 0.2",
+    "def auth_user(token): return db.find(token)",
+    "def save_log(msg): print(f'[LOG] {msg}')"
+])
+
+# 3. Query with natural language
+results = searcher.query("how to pay taxes?", top_k=1)
+print(results[0][0])  # Prints the first code snippet
+```
+
+## 📊 Performance (H100 Result)
+
+| Metric | Result | Target |
+|--------|--------|--------|
+| **MRR** | **0.9052** | 0.60 |
+| Hits@1 | 86.2% | - |
+| Median Rank | 1.0 | - |
 
 ## 🔧 Training Hardware
 
@@ -56,14 +79,14 @@ python -m src.eval.code_search --checkpoint checkpoints/best.pt
 ```
 repo-jepa/
 ├── src/
-│   ├── config.py      # Model configuration
-│   ├── model.py       # RepoJEPA architecture
-│   ├── loss.py        # VICReg loss
-│   ├── train.py       # Training loop
-│   ├── data/          # Data loaders
-│   └── eval/          # Validation scripts
-├── hf_export/         # Hugging Face export
-└── tests/             # Unit tests
+│   ├── model.py       # Dual-encoder architecture
+│   ├── train.py       # Training with checkpoint resume
+│   ├── data/          # Real-data loaders (CodeSearchNet)
+│   ├── eval/          # MRR benchmarks
+│   └── utils/         
+│       └── search.py  # User-friendly Search Engine
+├── hf_export/         # Tools to export to Hugging Face
+└── notebooks/         # Analysis and demos
 ```
 
 ## 📜 License
