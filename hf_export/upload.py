@@ -8,6 +8,7 @@ Usage:
 import argparse
 import json
 import shutil
+import os
 from pathlib import Path
 
 import torch
@@ -113,7 +114,8 @@ print(f"Similarity: {{similarity:.4f}}")
 
 def upload_to_hub(folder_path: str, repo_id: str, private: bool = False):
     """Upload model to Hugging Face Hub."""
-    api = HfApi()
+    token = os.environ.get("HF_TOKEN")
+    api = HfApi(token=token)
     
     # Create repo if it doesn't exist
     try:
