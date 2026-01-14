@@ -22,7 +22,10 @@ def load_env():
             for line in f:
                 if "=" in line:
                     key, value = line.strip().split("=", 1)
+                    # Strip quotes if present
+                    value = value.strip("'").strip('"')
                     os.environ[key] = value
+
 load_env()
 
 
