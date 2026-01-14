@@ -111,6 +111,9 @@ class CodeSearchNetDataset(Dataset):
             ))
             
             count += 1
+            if count % 50000 == 0:
+                print(f"  Processed {count}... (still fetching stream)")
+                
             if max_samples and count >= max_samples:
                 break
         
