@@ -50,10 +50,33 @@ class RepoJEPASearch:
         else:
             self.code_embeddings = torch.cat([self.code_embeddings, torch.cat(new_embeddings)])
             
-    def query(self, text: str, top_k: int = 5) -> List[Tuple[str, float]]:
-        """Search for the most relevant code snippets for a natural language query."""
+    def save_index(self, path: str):
+        """Save embeddings and metadata to disk."""
+        data = {
+            "embeddings": self.code_embeddings,
+            "database": self.code_database,
+            "metadata": getattr(self, "metadata", [])
+        }
+        torch.save(data, path)
+        print(f"Index saved to {path}")
+
+    def load_index(self, path: str):
+        """Load embeddings and metadata from disk."""
+        data = torch.load(path, map_location="cpu")
+        self.code_embeddings = data["embeddings"]
+        # Handle both 'database' and 'raw_code' keys for backward compatibility
+        self.code_database = data.get("database") or data.get("raw_code")
+        self.metadata = data.get("metadata", [])
+        print(f"Index loaded from {path} ({len(self.code_database)} snippets)")
+
+
+    def query(self, text: str, top_k: int = 5) -> List[dict]:
+        """Search for the most relevant code snippets."""
+        if self.code_embeddings is None:
+            raise ValueError("No code indexed. Run add_code() or load_index() first.")
+
         inputs = self.tokenizer(
-            text, return_tensors="pt"
+            text, return_tensors="pt", truncation=True, max_length=512
         ).to(self.device)
         
         with torch.no_grad():
@@ -70,9 +93,16 @@ class RepoJEPASearch:
         
         results = []
         for score, idx in zip(scores, indices):
-            results.append((self.code_database[idx.item()], score.item()))
+            res = {
+                "code": self.code_database[idx.item()],
+                "score": score.item()
+            }
+            if hasattr(self, "metadata") and len(self.metadata) > idx.item():
+                res.update(self.metadata[idx.item()])
+            results.append(res)
             
         return results
+
 
 if __name__ == "__main__":
     # Example usage (local test)
