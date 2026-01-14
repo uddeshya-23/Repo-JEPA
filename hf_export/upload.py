@@ -15,10 +15,11 @@ import torch
 from huggingface_hub import HfApi, create_repo
 
 
-def convert_checkpoint_to_hf(checkpoint_path: str, output_dir: str):
+def convert_checkpoint_to_hf(checkpoint_path: str, output_dir: str, repo_id: str):
     """
     Convert training checkpoint to Hugging Face format.
     """
+
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
@@ -80,8 +81,9 @@ Tested on 1,000 unseen real-world Python functions from CodeSearchNet.
 from transformers import AutoModel, AutoTokenizer
 
 # 1. Load Model
-model = AutoModel.from_pretrained("{args.repo}", trust_remote_code=True)
+model = AutoModel.from_pretrained("{repo_id}", trust_remote_code=True)
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
+
 
 # 2. Encode Code
 code = "def handle_login(user): return auth.verify(user)"
@@ -145,7 +147,8 @@ def main():
     args = parser.parse_args()
     
     # Convert checkpoint
-    output_path = convert_checkpoint_to_hf(args.checkpoint, args.output_dir)
+    output_path = convert_checkpoint_to_hf(args.checkpoint, args.output_dir, args.repo)
+
     
     # Upload if requested
     if not args.skip_upload:
