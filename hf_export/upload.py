@@ -107,8 +107,9 @@ print(f"Similarity: {{similarity:.4f}}")
 """
 
     
-    with open(output_path / "README.md", "w") as f:
+    with open(output_path / "README.md", "w", encoding="utf-8") as f:
         f.write(model_card)
+
     
     print(f"Export complete! Files saved to {output_path}")
     return output_path
