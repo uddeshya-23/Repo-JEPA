@@ -14,6 +14,17 @@ from pathlib import Path
 import torch
 from huggingface_hub import HfApi, create_repo
 
+# Load .env if it exists
+def load_env():
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        with open(env_path, "r") as f:
+            for line in f:
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    os.environ[key] = value
+load_env()
+
 
 def convert_checkpoint_to_hf(checkpoint_path: str, output_dir: str, repo_id: str):
     """
