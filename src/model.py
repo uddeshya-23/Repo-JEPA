@@ -49,13 +49,17 @@ class RepoJEPA(nn.Module):
             self.context_encoder = RobertaModel.from_pretrained(
                 config.pretrained_encoder,
                 add_pooling_layer=False,
-                token=HF_TOKEN
+                token=HF_TOKEN,
+                use_safetensors=True
             )
+
             self.target_encoder = RobertaModel.from_pretrained(
                 config.pretrained_encoder,
                 add_pooling_layer=False,
-                token=HF_TOKEN
+                token=HF_TOKEN,
+                use_safetensors=True
             )
+
         else:
             # Random initialization (for testing)
             roberta_config = RobertaConfig(
